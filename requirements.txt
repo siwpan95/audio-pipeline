@@ -1,0 +1,6 @@
+# audio_pipeline dependencies (auto-generated 2026-08-20)
+mido
+numpy
+pydub
+pytest
+# local deps (sibling projects, not pip): bloodmusic

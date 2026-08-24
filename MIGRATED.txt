@@ -1,0 +1,1 @@
+此目录已迁移至 G:/tools/bloodmusic/pipeline/ 内部。请使用 bloodmusic.album_maker 统一入口。
