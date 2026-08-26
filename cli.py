@@ -247,6 +247,28 @@ def cmd_stage_d(args: argparse.Namespace) -> None:
     print(f"阶段D 完成（{res['fidelity']}）→ {len(res['files'])} 条分轨。")
 
 
+def cmd_chain(args: argparse.Namespace) -> None:
+    """S6：提示词→混音→电台 一键链。"""
+    from pathlib import Path
+    from musickit_chain import ChainConfig, run_chain
+    from pipelog import PipelineLog
+
+    ws = Path(args.workspace)
+    ws.mkdir(parents=True, exist_ok=True)
+    cfg = ChainConfig(
+        workspace=ws, channel=args.channel, style=args.style, bars=args.bars,
+        fmt=args.fmt, max_tracks=args.max_tracks, fusion=args.fusion,
+        release_safe=args.release_safe, radio_url=args.radio, timeout=args.timeout,
+    )
+    log = PipelineLog(ws / "pipeline.log")
+    report = run_chain(cfg, log)
+    for k, v in report["stages"].items():
+        print(f"[{k}] {v}")
+    for e in report["errors"]:
+        print(f"[错误] {e}", file=sys.stderr)
+    print(f"\n完成：{'成功' if report['ok'] else '存在失败阶段'}（run_id={report['run_id']}，日志 {ws / 'pipeline.log'}）")
+
+
 def cmd_tasks(args: argparse.Namespace) -> None:
     """任务日志审计：读取 <workspace>/pipeline.log（P3 日志即事实源）。"""
     from pipelog import PipelineLog
@@ -342,6 +364,19 @@ def main(argv: list[str] | None = None) -> None:
     p_d.add_argument("--model", default="htdemucs")
     p_d.add_argument("--shifts", type=int, default=2)
 
+    # chain（S6：提示词→混音→电台 一键链）
+    p_ch = sub.add_parser("chain", help="musickit 一键链：提示词校验→渲染混音→电台开播")
+    p_ch.add_argument("--workspace", required=True, help="工作区（渲染产物目录）")
+    p_ch.add_argument("--channel", default="random", help="混音师 slug（24 位之一 / random）")
+    p_ch.add_argument("--style", default=None, help="提示词风格 key（63 流派之一，可选）")
+    p_ch.add_argument("--bars", type=int, default=32)
+    p_ch.add_argument("--fmt", default="mp3", choices=("mp3", "wav"))
+    p_ch.add_argument("--max-tracks", type=int, default=5)
+    p_ch.add_argument("--fusion", action="store_true")
+    p_ch.add_argument("--release-safe", action="store_true")
+    p_ch.add_argument("--radio", default="http://localhost:8000", help="Node 电台地址")
+    p_ch.add_argument("--timeout", type=int, default=900)
+
     # tasks（P3 任务日志审计）
     p_t = sub.add_parser("tasks", help="审计 <workspace>/pipeline.log 任务事件日志")
     p_t.add_argument("--workspace", required=True, help="工作区根目录")
@@ -364,6 +399,8 @@ def main(argv: list[str] | None = None) -> None:
         cmd_stage_d(args)
     elif args.command == "tasks":
         cmd_tasks(args)
+    elif args.command == "chain":
+        cmd_chain(args)
 
 
 if __name__ == "__main__":
