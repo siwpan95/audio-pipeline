@@ -14,7 +14,7 @@
 - `tests/` —— 冒烟与流水线测试；`docs/` —— 设计文档
 
 ## 运行方式与依赖
-- 运行：`F:\Python314\python.exe G:\tools\audio\audio_pipeline\cli.py doctor`（环境诊断），
+- 运行：`F:\Python314\python.exe G:\repos\audio-pipeline\cli.py doctor`（环境诊断），
   `... cli.py run --workspace <dir> --songs <a.mp3> <b.mp3>`（完整流水线）。
 - 依赖：自身不引入新重包，复用本地环境——`bloodmusic`（editable 安装）、`remix`（sys.path 注入）、
   `pydub` + `numpy`（audioop-lts 提供 Python 3.14 的 audioop），`audio_separator` 经 subprocess 调用其自有 venv。
