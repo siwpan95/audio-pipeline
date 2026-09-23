@@ -185,6 +185,7 @@ def cmd_stage_a(args: argparse.Namespace) -> None:
 def cmd_stage_b(args: argparse.Namespace) -> None:
     """仅阶段B。"""
     from instrument_pool import InstrumentPool
+    from source_maker import make_source      # 2026-09-23 修复：原缺此导入，阶段B 一跑就 NameError
     ws = Path(args.workspace)
     fixtures = ws / "instruments"
     stems_dir = ws / "stems"
