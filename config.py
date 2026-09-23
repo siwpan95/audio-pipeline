@@ -48,7 +48,7 @@ REMIX_BIN = os.path.join(REMIX_ROOT, "bin")
 def default_midi_root() -> Path:
     """MIDI 素材根：环境变量 MIDI_ROOT 优先，其次同级仓 repos/midi。
 
-    2026-09-23 去本地化：原默认值 G:/midi（顶层分类目录，已拆分为 repos/midi）。
+    2026-09-23 去本地化：原默认值指向已拆分的顶层分类目录，现按同级仓推导。
     """
     env = os.environ.get("MIDI_ROOT")
     return Path(env) if env else (REPOS_ROOT / "midi")
