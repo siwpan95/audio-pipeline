@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -39,6 +40,7 @@ from config import (
     HONESTY_DISCLAIMER,
     AUDIO_SEPARATOR_VENV_PY,
     REMIX_BIN,
+    default_midi_root,
 )
 
 # 重型依赖（orchestrator → instrument_pool → bloodmusic）惰性导入：
@@ -143,7 +145,7 @@ def cmd_run(args: argparse.Namespace) -> None:
     cfg = PipelineConfig(
         workspace=Path(args.workspace),
         songs=[Path(s) for s in (args.songs or [])],
-        midi_root=Path(args.midi_root),
+        midi_root=(Path(args.midi_root) if args.midi_root else default_midi_root()),
         sep_model=args.model,
         sep_shifts=args.shifts,
         separate_mode=args.separate_mode,
@@ -314,7 +316,7 @@ def main(argv: list[str] | None = None) -> None:
     p_run = sub.add_parser("run", help="运行完整流水线 A→B→C→D")
     p_run.add_argument("--workspace", required=True, help="工作区根目录")
     p_run.add_argument("--songs", nargs="+", default=[], help="阶段A 输入歌曲")
-    p_run.add_argument("--midi-root", default="G:/midi", help="MIDI 素材根（默认 G:/midi）")
+    p_run.add_argument("--midi-root", default="", help="MIDI 素材根（留空则取环境变量 MIDI_ROOT，再退到同级仓 repos/midi）")
     p_run.add_argument("--model", default="htdemucs", help="分离模型（默认 htdemucs）")
     p_run.add_argument("--shifts", type=int, default=2, help="demucs shifts（默认 2）")
     p_run.add_argument(

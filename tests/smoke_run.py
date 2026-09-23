@@ -4,7 +4,7 @@
 smoke_run.py —— 独立冒烟测试（无需 pytest，用合成小样本跑四阶段 B→C→D）。
 
 用法：
-    F:/Python314/python.exe G:/tools/audio_pipeline/tests/smoke_run.py
+    python tests/smoke_run.py    # 在音频流水线仓根执行
 
 流程：
     1) 在临时目录建工作区

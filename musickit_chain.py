@@ -23,7 +23,9 @@ from pathlib import Path
 
 from pipelog import PipelineLog
 
-MUSICKIT_ROOT = Path(r"G:\music\musickit")
+# 2026-09-23 去本地化：MUSICKIT_ROOT 环境变量优先，其次同级仓 repos/musickit
+# （原 G:\music\musickit 为顶层分类目录，已失效）
+MUSICKIT_ROOT = Path(os.environ.get("MUSICKIT_ROOT") or (Path(__file__).resolve().parent.parent / "musickit"))
 RENDERER = MUSICKIT_ROOT / "remix" / "tools" / "musickit_render_one.py"
 STYLE_CLI = MUSICKIT_ROOT / "music" / "style_plugin.py"
 PYTHON = sys.executable

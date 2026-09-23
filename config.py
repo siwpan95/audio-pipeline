@@ -22,12 +22,16 @@ from pathlib import Path
 
 # ───────────────────────── 外部项目路径常量 ─────────────────────────
 
+# 2026-09-23 去本地化：同级仓根由本文件位置推导（…/repos/<本仓> → …/repos），
+# 均可用同名环境变量覆盖；原 G:\tools\audio\* 旧路径已失效。
+REPOS_ROOT = Path(__file__).resolve().parent.parent
+
 # remix 根：仅做 sys.path 注入后 import core.audio_mixer / core.audio_loader
-REMIX_ROOT = r"G:\tools\audio\remix"
-# bloodmusic 根（editable 已装，通常无需 path 注入，这里仅作文档/兜底）
-BLOODMUSIC_ROOT = r"G:\tools\audio\bloodmusic"
+REMIX_ROOT = os.environ.get("REMIX_ROOT") or str(REPOS_ROOT / "remix")
+# bloodmusic 根（= 仓 audio-generation；editable 已装，这里仅作文档/兜底）
+BLOODMUSIC_ROOT = os.environ.get("BLOODMUSIC_ROOT") or str(REPOS_ROOT / "audio-generation")
 # audio_separator 根：仅通过 subprocess 调用其自有 venv，绝不 import
-AUDIO_SEPARATOR_ROOT = r"G:\tools\audio\audio_separator"
+AUDIO_SEPARATOR_ROOT = os.environ.get("AUDIO_SEPARATOR_ROOT") or str(REPOS_ROOT / "audio-separator")
 # audio_separator 的 venv 解释器（torch 重包留在自有 venv）
 AUDIO_SEPARATOR_VENV_PY = os.path.join(
     AUDIO_SEPARATOR_ROOT, "venv", "Scripts", "python.exe"
@@ -38,6 +42,17 @@ if not os.path.isfile(AUDIO_SEPARATOR_VENV_PY):
 
 # remix 自带的 ffmpeg / ffprobe（仅用这一份，不污染系统 PATH）
 REMIX_BIN = os.path.join(REMIX_ROOT, "bin")
+
+# ───────────────────────── MIDI 素材根（阶段B 只读输入）─────────────────────────
+
+def default_midi_root() -> Path:
+    """MIDI 素材根：环境变量 MIDI_ROOT 优先，其次同级仓 repos/midi。
+
+    2026-09-23 去本地化：原默认值 G:/midi（顶层分类目录，已拆分为 repos/midi）。
+    """
+    env = os.environ.get("MIDI_ROOT")
+    return Path(env) if env else (REPOS_ROOT / "midi")
+
 
 # ───────────────────────── 默认分离参数 ─────────────────────────
 
@@ -100,9 +115,20 @@ def bootstrap_env() -> None:
             "请确认 audioop-lts 已安装且 remix/bin 含 ffmpeg。\n"
         )
 
-    # 3) remix 根注入 sys.path
-    if REMIX_ROOT not in sys.path:
+    # 3) remix 根注入 sys.path（先置顶一次）
+    def _pin_remix_path() -> None:
+        """把 REMIX_ROOT 稳定置于 sys.path 首位。
+
+        2026-09-23 实测：bloodmusic（命名空间包）在 **import 时**会把
+        site-packages\\bloodmusic 插到 sys.path[0]，而它与 remix 都存在顶层 core/ 包，
+        导致 `from core.audio_mixer import AudioMixer` 解析到 bloodmusic 的 core。
+        因此必须在 bloodmusic 导入之后再置顶一次。
+        """
+        if REMIX_ROOT in sys.path:
+            sys.path.remove(REMIX_ROOT)
         sys.path.insert(0, REMIX_ROOT)
+
+    _pin_remix_path()
 
     # 4) 验证 bloodmusic 可用（editable 已装，无需 path 注入）
     try:
@@ -112,8 +138,11 @@ def bootstrap_env() -> None:
     except Exception as exc:  # pragma: no cover
         sys.stderr.write(
             f"[audio_pipeline] 警告：import bloodmusic 失败（{exc}）。"
-            "请确认 F:\\Python314 已 editable 安装 bloodmusic。\n"
+            "请确认当前解释器已 editable 安装 bloodmusic。\n"
         )
+
+    # 4b) bloodmusic 导入可能改动 sys.path，重新置顶 REMIX_ROOT（见 _pin_remix_path 说明）
+    _pin_remix_path()
 
     _BOOTSTRAPPED = True
 

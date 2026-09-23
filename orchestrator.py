@@ -26,6 +26,7 @@ from config import (
     bootstrap_env,
     DEFAULT_SEP_MODEL,
     DEFAULT_SEP_SHIFTS,
+    default_midi_root,
 )
 from instrument_pool import (
     InstrumentPool,
@@ -47,7 +48,7 @@ class PipelineConfig:
 
     workspace: Path                              # audio_pipeline_workspace
     songs: list[Path] = field(default_factory=list)    # 阶段A 输入真实歌
-    midi_root: Path = Path("G:/midi")            # 阶段B MIDI 素材根（只读输入）
+    midi_root: Path = field(default_factory=default_midi_root)   # 阶段B MIDI 素材根（env MIDI_ROOT → 同级仓 repos/midi）
     sep_model: str = DEFAULT_SEP_MODEL
     sep_shifts: int = DEFAULT_SEP_SHIFTS
     mix_config: MixConfig = field(default_factory=MixConfig)   # 透传增益/归一化/削波/淡变/压缩/滤波
