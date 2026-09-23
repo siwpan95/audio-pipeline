@@ -2,7 +2,7 @@
 
 > 架构师：高见远（software-architect）
 > 配套 PRD：`C:\Users\13122\WorkBuddy\2026-08-11-05-24-02\PRD_audio_pipeline.md`
-> 形态：**独立编排工具** `G:\tools\audio\audio_pipeline\`，零代码耦合 + 依赖隔离（主理人 7 条决策已拍板）
+> 形态：**独立编排工具** `<仓库根>\`，零代码耦合 + 依赖隔离（主理人 7 条决策已拍板）
 
 ---
 
@@ -10,7 +10,7 @@
 
 | 主理人决策 | 本设计落点 |
 | --- | --- |
-| ① 独立编排工具，不嵌入任一项目 | 扁平模块集于 `G:\tools\audio\audio_pipeline\`，只调用不修改外部三项目 |
+| ① 独立编排工具，不嵌入任一项目 | 扁平模块集于 `<仓库根>\`，只调用不修改外部三项目 |
 | ② 跨 venv 混合策略 | remix/bloodmusic 同 `F:\Python314` → **同 env import**；audio_separator → **subprocess 自有 venv** |
 | ③ 模式 A 分轨保留契约 | `mixdown/_sources/` 硬拷贝 + `manifest.json`（输出名→乐器类别→原路径→sha256） |
 | ④ 采样器音色归类映射 | `instrument_pool.py::STEM_TO_POOL_KEY` 映射表 |
@@ -39,7 +39,7 @@
 ### 1.2 最终文件树与每文件职责
 
 ```
-G:\tools\audio\audio_pipeline\
+<仓库根>\
 ├── config.py            # [T1] 路径/常量/环境解析：REMIX_ROOT、AUDIO_SEPARATOR_VENV_PY、默认模型、
 │                       #       bootstrap_env()（PATH 注入 + pydub pin + sys.path 注入）、诚实性文案常量
 ├── instrument_pool.py   # [T2] (阶段A) STEM_TO_POOL_KEY 映射、InstrumentPool/PoolSample、build_instrument_pool()
@@ -68,10 +68,10 @@ G:\tools\audio\audio_pipeline\
 
 ```python
 # config.py —— 仅依赖 os/sys/pathlib（纯逻辑，零重包）
-REMIX_ROOT          = r"G:\tools\audio\remix"
-BLOODMUSIC_ROOT     = r"G:\tools\audio\bloodmusic"
-AUDIO_SEPARATOR_ROOT= r"G:\tools\audio\audio_separator"
-AUDIO_SEPARATOR_VENV_PY = r"G:\tools\audio\audio_separator\venv\Scripts\python.exe"  # 复用其约定，不 import
+REMIX_ROOT          = r"<同级仓>/remix"
+BLOODMUSIC_ROOT     = r"<同级仓>/audio-generation"
+AUDIO_SEPARATOR_ROOT= r"<同级仓>/audio-separator"
+AUDIO_SEPARATOR_VENV_PY = r"<同级仓>/audio-separator\venv\Scripts\python.exe"  # 复用其约定，不 import
 REMIX_BIN           = os.path.join(REMIX_ROOT, "bin")          # ffmpeg.exe / ffprobe.exe
 
 DEFAULT_SEP_MODEL   = "htdemucs"     # P1-1 可选 "htdemucs_6s"（吉他/钢琴更丰富，质量较弱）
@@ -251,7 +251,7 @@ from audio_pipeline.separate_back import SeparateMode
 class PipelineConfig:
     workspace: Path                              # audio_pipeline_workspace
     songs: list[Path]                            # 阶段A 输入真实歌
-    midi_root: Path = Path("G:/midi")            # 阶段B MIDI 素材
+    midi_root: Path = Path("<MIDI_ROOT>")            # 阶段B MIDI 素材
     sep_model: str = DEFAULT_SEP_MODEL
     sep_shifts: int = DEFAULT_SEP_SHIFTS
     mix_config: MixConfig = field(default_factory=MixConfig)   # 透传增益/归一化/削波/淡变/压缩/滤波
@@ -326,7 +326,7 @@ sequenceDiagram
 
 **跨进程边界小结**
 - 同 env import（编排进程内，无 subprocess）：`bloodmusic.bridge`、`bloodmusic.music.sampler`、`remix.core.audio_mixer`、`remix.core.audio_loader`。（torch 不在此 env。）
-- 外部 venv subprocess：`G:\tools\audio\audio_separator\venv\Scripts\python.exe -m demucs ...`（阶段 A、阶段 D-模式B）。编排进程 `sys.modules` 中**无 torch**。
+- 外部 venv subprocess：`<同级仓>/audio-separator/venv/Scripts/python.exe -m demucs ...`（阶段 A、阶段 D-模式B）。编排进程 `sys.modules` 中**无 torch**。
 - PATH 注入点：`config.bootstrap_env()` 在一切 import 之前执行（仿 `remix/main.py`）。
 
 ---
@@ -337,8 +337,8 @@ sequenceDiagram
 | --- | --- | --- | --- | --- |
 | `AudioMixer` / `AudioLoader` | `F:\Python314` | 同 env import | `from remix.core.audio_mixer import AudioMixer` | remix 根需 `sys.path.insert`；不修改 remix 源码 |
 | `bloodmusic.bridge` / `bloodmusic.music.sampler` | `F:\Python314` | 同 env import（editable 已装） | `import bloodmusic.bridge` | 不修改 bloodmusic 源码（R4 三文件 git diff 为空） |
-| `audio_separator` | `G:\tools\audio\audio_separator\venv` | **subprocess** | `VENV_PY -m demucs ...` | torch 永远留在自有 venv，编排层零接触 |
-| ffmpeg | `G:\tools\audio\remix\bin` | PATH 注入 + pydub pin | `bootstrap_env()` | 仅 remix/bin 的 ffmpeg，不污染系统 |
+| `audio_separator` | `<同级仓>/audio-separator/venv` | **subprocess** | `VENV_PY -m demucs ...` | torch 永远留在自有 venv，编排层零接触 |
+| ffmpeg | `<同级仓>/remix/bin` | PATH 注入 + pydub pin | `bootstrap_env()` | 仅 remix/bin 的 ffmpeg，不污染系统 |
 
 - **编排层自身依赖**：仅标准库 + `pathlib`；运行所需重包（numpy/pydub/soundfile/mido 等）全部来自 `F:\Python314` 已装环境。`requirements.txt` 仅作文档声明，不引入新重包。
 - **首次联网点**：阶段 A 首次拆歌 / 阶段 D-模式B 首次重分离，demucs 自动下载权重（htdemucs ~80MB / htdemucs_6s ~80MB / bs-roformer ~700MB，见 `bs_roformer_runner` 注释）。决策⑥允许；下载后离线运行。
@@ -386,7 +386,7 @@ graph TD
 audio_pipeline_workspace/
 ├── instruments/      # 阶段A：audio_separator 拆出的 .wav stems（按歌曲分子目录）
 │   └── <song>/<stem>.wav          # stem∈{drums,bass,piano,guitar,other,vocals}
-├── midi/             # 阶段B 输入：来自 G:\midi 的 .mid（只读，不写）
+├── midi/             # 阶段B 输入：来自 <MIDI_ROOT> 的 .mid（只读，不写）
 ├── stems/            # 阶段B：make_source 导出的单音源（WAV/OGG/FLAC）
 │   └── <name>.<fmt>
 ├── mixdown/          # 阶段C 成品歌 + 模式A 还原源

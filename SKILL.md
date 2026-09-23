@@ -1,6 +1,6 @@
 ---
 name: audio-pipeline
-description: Maintain the audio_pipeline orchestration tool (G:/tools/audio/audio_pipeline). Four-stage music production pipeline (separate→source→mixdown→re-separate) with JSONL task log.
+description: Maintain the audio_pipeline orchestration tool (本 SKILL.md 所在仓库根). Four-stage music production pipeline (separate→source→mixdown→re-separate) with JSONL task log.
 agent_created: true
 ---
 
