@@ -1,5 +1,8 @@
 # audio_pipeline
 
+> 仓库：<https://gitee.com/siwpan/audio-pipeline> ｜ 许可：MIT（见 [LICENSE](LICENSE)）
+> 注：文中 <PATH> 为路径占位符，请替换为你本机实际的目录 / 可执行文件路径。
+
 纯音乐制作流水线（编排层）—— 把「拆歌 → 单音源导出 → 混音/分轨保留 → 后期重分离」四阶段串成一条 CLI 流水线。
 
 ## 语言 / 类型
@@ -14,7 +17,7 @@
 - `tests/` —— 冒烟与流水线测试；`docs/` —— 设计文档
 
 ## 运行方式与依赖
-- 运行：`F:\Python314\python.exe G:\repos\audio-pipeline\cli.py doctor`（环境诊断），
+- 运行：`python <PATH> doctor`（环境诊断），
   `... cli.py run --workspace <dir> --songs <a.mp3> <b.mp3>`（完整流水线）。
 - 依赖：自身不引入新重包，复用本地环境——`bloodmusic`（editable 安装）、`remix`（sys.path 注入）、
   `pydub` + `numpy`（audioop-lts 提供 Python 3.14 的 audioop），`audio_separator` 经 subprocess 调用其自有 venv。
@@ -25,7 +28,7 @@
 每次 `run` 自动落盘 `<workspace>/pipeline.log`（JSONL，含 run_id、各阶段 start/skip/done/error、耗时与错误消息）。审计：
 
 ```bash
-F:\Python314\python.exe cli.py tasks --workspace <工作区> [--limit 100] [--json]
+python cli.py tasks --workspace <工作区> [--limit 100] [--json]
 ```
 
 `tasks` 不依赖重型包（bloodmusic/demucs），环境不完整时也可审计。
