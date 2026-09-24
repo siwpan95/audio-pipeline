@@ -23,7 +23,7 @@ from pathlib import Path
 # ───────────────────────── 外部项目路径常量 ─────────────────────────
 
 # 2026-09-23 去本地化：同级仓根由本文件位置推导（…/repos/<本仓> → …/repos），
-# 均可用同名环境变量覆盖；原 G:\tools\audio\* 旧路径已失效。
+# 均可用同名环境变量覆盖；原路径已失效。
 REPOS_ROOT = Path(__file__).resolve().parent.parent
 
 # remix 根：仅做 sys.path 注入后 import core.audio_mixer / core.audio_loader
