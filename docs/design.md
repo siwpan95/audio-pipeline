@@ -11,14 +11,14 @@
 | 主理人决策 | 本设计落点 |
 | --- | --- |
 | ① 独立编排工具，不嵌入任一项目 | 扁平模块集于 `<仓库根>\`，只调用不修改外部三项目 |
-| ② 跨 venv 混合策略 | remix/bloodmusic 同 `F:\Python314` → **同 env import**；audio_separator → **subprocess 自有 venv** |
+| ② 跨 venv 混合策略 | remix/bloodmusic 同 `/Python314` → **同 env import**；audio_separator → **subprocess 自有 venv** |
 | ③ 模式 A 分轨保留契约 | `mixdown/_sources/` 硬拷贝 + `manifest.json`（输出名→乐器类别→原路径→sha256） |
 | ④ 采样器音色归类映射 | `instrument_pool.py::STEM_TO_POOL_KEY` 映射表 |
 | ⑤ 阶段 B 走法 | 优先 `bloodmusic.bridge`（`render_pattern_file`）合成；必要时 `sampler` API 消费乐器池 |
 | ⑥ 首次联网下载模型 | audio_separator subprocess 首次触发 demucs/bs-roformer 权重下载，之后离线 |
 | ⑦ 模式 B 可见性 | `--separate-mode algo` 显式开关，默认模式 A；CLI/日志/manifest 统一标注有损 |
 
-**三条硬约束贯穿全文**：依赖隔离（编排层自身不装 torch/pydub 重包，仅复用 `F:\Python314` 已装环境）、零耦合（不 import 外部私有内部模块做硬绑定，subprocess + 文件交换为主）、诚实性（混音不可逆、再分离是近似，禁止宣称无损）。
+**三条硬约束贯穿全文**：依赖隔离（编排层自身不装 torch/pydub 重包，仅复用 `/Python314` 已装环境）、零耦合（不 import 外部私有内部模块做硬绑定，subprocess + 文件交换为主）、诚实性（混音不可逆、再分离是近似，禁止宣称无损）。
 
 ---
 
@@ -29,7 +29,7 @@
 | 难点 | 选择 | 理由 |
 | --- | --- | --- |
 | 跨 venv 调用 audio_separator（torch 重包） | **subprocess** `[venv\Scripts\python.exe, -m, demucs]` | 绝不把 torch 引入编排层；复用其 `src/config.py` 的 `VENV_PY` 路径约定 |
-| 编排层复用 remix/bloodmusic | **同 env import**（`F:\Python314` 已装 bloodmusic editable；remix 需 `sys.path.insert`） | 二者纯逻辑模块，轻量；决策②允许 |
+| 编排层复用 remix/bloodmusic | **同 env import**（`/Python314` 已装 bloodmusic editable；remix 需 `sys.path.insert`） | 二者纯逻辑模块，轻量；决策②允许 |
 | pydub 找不到 ffmpeg | 仿 `remix/main.py`：注入 `remix/bin` 到 `PATH` **并 pin** `pydub.AudioSegment.converter/ffprobe` | 仅 PATH 不够稳，pin 路径最可靠 |
 | 采样器只吃 .wav | 阶段 A 强制 WAV（demucs 本就输出 WAV）；池样本即 WAV | 满足 P0-1 |
 | remix 混音要 16-bit int | 阶段 C 用 `AudioLoader.unify(sample_width=2)` 统一为 16-bit 再 `extract_samples` | 满足 AudioMixer 输入契约 |
@@ -49,7 +49,7 @@
 ├── separate_back.py     # [T5] (阶段D) separate_back()：模式A 复用 manifest / 模式B subprocess audio_separator
 ├── orchestrator.py      # [T6] PipelineConfig、run_pipeline()：串联 A→B→C→D + 基于 manifest 断点续跑
 ├── cli.py               # [T6] argparse 入口：run / stage-a..d / doctor，--separate-mode 开关
-├── requirements.txt     # 编排层自身依赖声明（仅文档说明：运行于 F:\Python314，需 bloodmusic+remix 已装）
+├── requirements.txt     # 编排层自身依赖声明（仅文档说明：运行于 /Python314，需 bloodmusic+remix 已装）
 ├── tests\
 │   ├── __init__.py
 │   ├── conftest.py      # 合成正弦小样本 fixtures、依赖隔离探针
@@ -335,12 +335,12 @@ sequenceDiagram
 
 | 外部调用 | env | 方式 | 路径/入口 | 隔离保证 |
 | --- | --- | --- | --- | --- |
-| `AudioMixer` / `AudioLoader` | `F:\Python314` | 同 env import | `from remix.core.audio_mixer import AudioMixer` | remix 根需 `sys.path.insert`；不修改 remix 源码 |
-| `bloodmusic.bridge` / `bloodmusic.music.sampler` | `F:\Python314` | 同 env import（editable 已装） | `import bloodmusic.bridge` | 不修改 bloodmusic 源码（R4 三文件 git diff 为空） |
+| `AudioMixer` / `AudioLoader` | `/Python314` | 同 env import | `from remix.core.audio_mixer import AudioMixer` | remix 根需 `sys.path.insert`；不修改 remix 源码 |
+| `bloodmusic.bridge` / `bloodmusic.music.sampler` | `/Python314` | 同 env import（editable 已装） | `import bloodmusic.bridge` | 不修改 bloodmusic 源码（R4 三文件 git diff 为空） |
 | `audio_separator` | `<同级仓>/audio-separator/venv` | **subprocess** | `VENV_PY -m demucs ...` | torch 永远留在自有 venv，编排层零接触 |
 | ffmpeg | `<同级仓>/remix/bin` | PATH 注入 + pydub pin | `bootstrap_env()` | 仅 remix/bin 的 ffmpeg，不污染系统 |
 
-- **编排层自身依赖**：仅标准库 + `pathlib`；运行所需重包（numpy/pydub/soundfile/mido 等）全部来自 `F:\Python314` 已装环境。`requirements.txt` 仅作文档声明，不引入新重包。
+- **编排层自身依赖**：仅标准库 + `pathlib`；运行所需重包（numpy/pydub/soundfile/mido 等）全部来自 `/Python314` 已装环境。`requirements.txt` 仅作文档声明，不引入新重包。
 - **首次联网点**：阶段 A 首次拆歌 / 阶段 D-模式B 首次重分离，demucs 自动下载权重（htdemucs ~80MB / htdemucs_6s ~80MB / bs-roformer ~700MB，见 `bs_roformer_runner` 注释）。决策⑥允许；下载后离线运行。
 - **禁止项**：编排层 `import audio_separator`（任何模块）；把 torch/pydub 混装进单环境；修改 `music/pattern.py`/`export/batch.py`/`export/midi_export.py`（R4）。
 
@@ -434,7 +434,7 @@ audio_pipeline_workspace/
 2. **AudioMixer 默认参数**：`MixConfig` 默认（SOFT 削波 / RMS 归一化 / peak 0.95）是否合适；`crossfade_ms` 在「同时叠加」vs「顺序串联」两种语义下的使用约定（见 `mix` 内 `crossfade_ms>0` 走 `_mix_sequence`）。
 3. **demucs 默认模型**：`htdemucs`（四轨·快·质量平衡）vs `htdemucs_6s`（六轨·吉他/钢琴更丰富但质量较弱，P1-1）。建议默认 `htdemucs`，`htdemucs_6s` 作 opt-in；需在 CLI/配置暴露。
 4. **阶段B pattern 来源**：`TrackSpec.pattern_name` 如何从 `ImportResult.all_patterns` 选取；是否允许「无 MIDI」的程序化（内置）pattern。
-5. **`F:\Python314` 是否装 `audioop-lts`**：Python 3.14 已移除标准库 `audioop`，pydub 运行依赖它（`remix/main.py` 有 `import audioop_lts` 兜底）。需工程师确认/安装，否则 pydub import 失败。
+5. **`/Python314` 是否装 `audioop-lts`**：Python 3.14 已移除标准库 `audioop`，pydub 运行依赖它（`remix/main.py` 有 `import audioop_lts` 兜底）。需工程师确认/安装，否则 pydub import 失败。
 6. **模式A 拷贝策略**：默认**硬拷贝**（保证不可变、零依赖原 stems）；是否额外支持「仅引用 manifest」以省空间（默认不开）。
 7. **sampled 路径时率对齐**：池样本来自 demucs（44100）；bloodmusic `_SR` 若不同，需在 `render_sampler_pattern(sr=...)` 显式对齐，避免混音阶段 `unify` 二次重采样。
 
